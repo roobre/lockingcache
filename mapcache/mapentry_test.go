@@ -11,38 +11,24 @@ var bbbb = []byte("BBBB")
 func TestMapEntry(t *testing.T) {
 	me := &mapEntry{}
 
-	readbuf := make([]byte, 16)
-
-	n, _ := me.Read(readbuf)
-	if n > 0 {
-		t.Fatalf("Initial read returned %d bytes", n)
-	}
-
 	me.Write(aaaa)
 
-	n, _ = me.Read(readbuf)
-	if n != len(aaaa) {
-		t.Fatalf("Read after write returned %d, expected %d", n, len(aaaa))
+	if len(me.buf) != len(aaaa) {
+		t.Fatalf("Buffer has %d bytes, expected %d", len(me.buf), len(aaaa))
 	}
 
-	if bytes.Compare(readbuf[:len(aaaa)], aaaa) != 0 {
-		t.Fatalf("Read did not return the expected value")
-	}
-
-	n, _ = me.Read(readbuf)
-	if n != 0 {
-		t.Fatalf("Subsequent read returned %d bytes", n)
+	if bytes.Compare(me.buf[:len(aaaa)], aaaa) != 0 {
+		t.Fatalf("Buffer does not contain the expected value")
 	}
 
 	me.Write(append(aaaa, bbbb...))
-	expected := append(aaaa, bbbb...)
+	expected := append(aaaa, append(aaaa, bbbb...)...)
 
-	n, _ = me.Read(readbuf)
-	if n != len(expected) {
-		t.Fatalf("Read after write returned %d, expected %d", n, len(expected))
+	if len(me.buf) != len(expected) {
+		t.Fatalf("Buffer has %d bytes, expected %d", len(me.buf), len(aaaa))
 	}
 
-	if bytes.Compare(readbuf[:len(expected)], expected) != 0 {
-		t.Fatalf("Read did not return the expected value")
+	if bytes.Compare(me.buf[:len(expected)], expected) != 0 {
+		t.Fatalf("Buffer does not contain the expected value")
 	}
 }

@@ -12,11 +12,6 @@ type mapTable struct {
 }
 
 func (mt *mapTable) Access(key string, maxAge time.Duration, handler lc.Handler) error {
-	// noop
-	if handler.Then == nil && handler.Else == nil {
-		return nil
-	}
-
 	mt.Lock()
 
 	entry, entryFound := mt.rows[key]
@@ -35,8 +30,7 @@ func (mt *mapTable) Access(key string, maxAge time.Duration, handler lc.Handler)
 				return nil
 			}
 
-			err := handler.Then(entry)
-			entry.Reset()
+			err := handler.Then(entry.Reader())
 			return err
 		} else {
 			// If expired or not valid, delete it from the map
@@ -60,8 +54,8 @@ func (mt *mapTable) Access(key string, maxAge time.Duration, handler lc.Handler)
 	mt.Unlock()
 
 	// Invoke handler
-	err := handler.Else(entry)
 	entry.Reset()
+	err := handler.Else(entry)
 	if err == nil {
 		// Mark entry as valid if else handler did not error
 		entry.valid = true
