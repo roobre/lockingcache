@@ -1,4 +1,4 @@
-# 🔗 tcache
+# 🔗 tcache [![Maintainability](https://api.codeclimate.com/v1/badges/bc3394097831713f05fe/maintainability)](https://codeclimate.com/github/roobre/tcache/maintainability)
 
 tcache is a write-once, transactional cache specially suited for caching data which takes more time to be produced than to be re-requested.
 
