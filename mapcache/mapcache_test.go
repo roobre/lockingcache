@@ -24,7 +24,7 @@ type tableTester struct {
 
 type result struct {
 	key        string
-	found      bool
+	hit        bool
 	err        error
 	thenCalled bool
 	elseCalled bool
@@ -44,7 +44,7 @@ func (tt *tableTester) request(key string, latency time.Duration, readError, wri
 	rt.err = tt.table.Access(key, 0, tcache.Handler{
 		Then: func(r io.Reader) error {
 			rt.thenCalled = true
-			rt.found = true
+			rt.hit = true
 			logTimestamp(tt.t, "  %s %s found!", reqId, key)
 			return readError
 		},
@@ -57,7 +57,7 @@ func (tt *tableTester) request(key string, latency time.Duration, readError, wri
 		},
 	})
 
-	logTimestamp(tt.t, "< %s %s completed (%v, %v)", reqId, key, rt.found, rt.err)
+	logTimestamp(tt.t, "< %s %s completed (%v, %v)", reqId, key, rt.hit, rt.err)
 
 	tt.rchan <- rt
 }
@@ -99,7 +99,7 @@ func TestParallelism(t *testing.T) {
 
 		switch r.key {
 		case "first":
-			if !r.found {
+			if !r.hit {
 				t.Fatal("request to first failed")
 			}
 
@@ -108,7 +108,7 @@ func TestParallelism(t *testing.T) {
 			}
 
 		case "second":
-			if r.found {
+			if r.hit {
 				secondFound++
 			}
 		}
@@ -139,7 +139,7 @@ func TestSequentialInvalidation(t *testing.T) {
 
 	go tester.request("first", 0, nil, nil)
 	r = <-tester.rchan
-	if !r.found {
+	if !r.hit {
 		t.Fatal("entry not re-populated after error")
 	}
 
@@ -148,13 +148,13 @@ func TestSequentialInvalidation(t *testing.T) {
 
 	go tester.request("first", 0, nil, nil)
 	r = <-tester.rchan
-	if r.found {
+	if r.hit {
 		t.Fatal("entry was not invalidated by an erroring write")
 	}
 
 	go tester.request("first", 0, nil, nil)
 	r = <-tester.rchan
-	if !r.found {
+	if !r.hit {
 		t.Fatal("entry not re-populated after error")
 	}
 }

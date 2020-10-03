@@ -46,6 +46,16 @@ func f() {
 }
 ```
 
+## Behavior
+
+tcache collections receive two functions, named `Then` and `Else`. `Then` is executed if an entry is found, and `Else` is executed if it is not.
+
+These functions may also return errors, which modify the cache state and execution rules:
+
+* If `Then` returns a non-nil error, the entry is flagged as *Invalid*, and the `Else` function will be executed after it
+  - Other routines which were accessing the entry concurrently will not be aware of this change, and may as well error and trigger their own execution of `Else` 
+* If `Else` returns a non-nil error, the entry is 
+
 ## Stability
 
 I have developed this project as an spin-off of a bigger HTTP server which needed a cache like this. I do not consider this code to be stable or production-ready in any sense.
