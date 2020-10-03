@@ -2,7 +2,7 @@
 
 tcache is a write-once, transactional cache specially suited for caching data which takes more time to be produced than to be re-requested.
 
-Its transactional design ensures that subsequent accesses to the same key blocks until the key is filled by an ongoing transaction, making data available and then be served from cache.
+Its transactional design ensures that subsequent accesses to the same key blocks until the key is filled by an ongoing transaction, waiting for data to be available and then serving it from cache.
 
 ## Use case
 
@@ -53,8 +53,13 @@ tcache collections receive two functions, named `Then` and `Else`. `Then` is exe
 These functions may also return errors, which modify the cache state and execution rules:
 
 * If `Then` returns a non-nil error, the entry is flagged as *Invalid*, and the `Else` function will be executed after it
-  - Other routines which were accessing the entry concurrently will not be aware of this change, and may as well error and trigger their own execution of `Else` 
-* If `Else` returns a non-nil error, the entry is 
+  - Other routines which were accessing the entry concurrently will not be aware of this change, which may or may not error and trigger their own execution of `Else`
+  - If at least one of multiple concurrent `Then` executions fails, the entry is guaranteed to be invalidated and replaced by the entry produced by any of the `Else` function of the goroutines whose `Then` failed
+* If `Else` returns a non-nil error, the entry is flagged as *Invalid* and the error same is returned by `Access`.
+
+If an invalid entry is found when querying the cache, the behavior is the same as if said entry were not there.
+
+`nil` is a valid handler for either `Then`, `Else`, or both. No action will be executed if the handler is nil, but existance, validity, and expiration checks will be performed, and `tcache.EntryMissingError` or `tcache.EntryInvalidatedError` will be returned accordingly.
 
 ## Stability
 
