@@ -36,6 +36,7 @@ func (me *mapEntry) HandleRead(maxAge time.Duration, handler func(io.Reader) err
 
 func (me *mapEntry) HandleWrite(handler func(writer io.Writer) error) error {
 	err := handler(&me.buffer)
+	me.modified = time.Now()
 	if err == nil {
 		// Mark entry as valid if else handler did not error
 		me.valid = true
