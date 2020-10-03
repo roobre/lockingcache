@@ -1,4 +1,4 @@
-# 🔗 tcache [![Maintainability](https://api.codeclimate.com/v1/badges/bc3394097831713f05fe/maintainability)](https://codeclimate.com/github/roobre/tcache/maintainability)
+# 🔗 tcache [![Build Status](https://travis-ci.org/roobre/tcache.svg?branch=master)](https://travis-ci.org/roobre/tcache)  [![Maintainability](https://api.codeclimate.com/v1/badges/bc3394097831713f05fe/maintainability)](https://codeclimate.com/github/roobre/tcache/maintainability) [![Test Coverage](https://api.codeclimate.com/v1/badges/bc3394097831713f05fe/test_coverage)](https://codeclimate.com/github/roobre/tcache/test_coverage) 
 
 tcache is a write-once, transactional cache specially suited for caching data which takes more time to be produced than to be re-requested.
 
