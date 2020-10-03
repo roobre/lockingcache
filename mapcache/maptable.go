@@ -1,7 +1,7 @@
 package mapcache
 
 import (
-	lc "roob.re/tcache"
+	"roob.re/tcache"
 	"sync"
 	"time"
 )
@@ -11,57 +11,46 @@ type mapTable struct {
 	rows map[string]*mapEntry
 }
 
-func (mt *mapTable) Access(key string, maxAge time.Duration, handler lc.Handler) error {
+func (mt *mapTable) Access(key string, maxAge time.Duration, handler tcache.Handler) error {
 	mt.Lock()
-
 	entry, entryFound := mt.rows[key]
+
+	handlerErr := tcache.EntryMissingError
 	if entryFound {
-		// We found an entry, attempt to lock it
+		mt.Unlock()
+
 		entry.RLock()
-		defer entry.RUnlock()
+		handlerErr = entry.HandleRead(maxAge, handler.Then)
+		entry.RUnlock()
 
-		// Check for validity and age
-		if entry.valid && time.Since(entry.modified) < maxAge {
-			// If valid, unlock index and process it
-			mt.Unlock()
-
-			// Do nothing if we dont have a found handler
-			if handler.Then == nil {
-				return nil
-			}
-
-			err := handler.Then(entry.Reader())
-			return err
-		} else {
-			// If expired or not valid, delete it from the map
-			delete(mt.rows, key)
+		if handlerErr == nil {
+			return nil
 		}
+
+		entry.Lock()
+		entry.Invalidate()
+		entry.Unlock()
+
+		mt.Lock()
+		delete(mt.rows, key)
 	}
 
 	// Exit early if we do not have an else handler
 	if handler.Else == nil {
 		mt.Unlock()
-		return nil
+		return handlerErr
 	}
 
 	// Create new key and lock in immediately
 	entry = &mapEntry{}
-	mt.rows[key] = entry
 	entry.Lock()
 	defer entry.Unlock()
-	// Release index mutex
-	// As entry mutex is locked for writing, subsequent accesses will block before validity check
+
+	mt.rows[key] = entry
 	mt.Unlock()
 
 	// Invoke handler
-	entry.Reset()
-	err := handler.Else(entry)
-	if err == nil {
-		// Mark entry as valid if else handler did not error
-		entry.valid = true
-	}
-
-	return err
+	return entry.HandleWrite(handler.Else)
 }
 
 func (mt *mapTable) Delete(key string) {

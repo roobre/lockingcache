@@ -5,6 +5,7 @@
 package tcache
 
 import (
+	"errors"
 	"io"
 	"time"
 )
@@ -30,7 +31,10 @@ type Table interface {
 // Handler is sugar syntax for holding the Then and Else functions
 type Handler struct {
 	// Then is executed when the key is found in the cache, which is made available as an io.Reader
-	Then func(io.Reader) error
+	Then func(r io.Reader) error
 	// Else is executed when the key is missing. An io.Writer will be provided
-	Else func(io.Writer) error
+	Else func(w io.Writer) error
 }
+
+var EntryMissingError = errors.New("entry missing")
+var EntryInvalidatedError = errors.New("entry invalidated")
