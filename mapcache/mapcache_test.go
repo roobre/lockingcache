@@ -208,22 +208,17 @@ func TestParallelReadErrors(t *testing.T) {
 	go tester.request("first", 4*time.Second, rerr, nil)
 	go tester.request("first", 4*time.Second, rerr, nil)
 
-	thensCalled := 0
 	elsesCalled := 0
 
 	for i := 0; i < 3; i++ {
 		r := <-tester.rchan
-
-		if r.thenCalled {
-			thensCalled++
-		}
 
 		if r.elseCalled {
 			elsesCalled++
 		}
 	}
 
-	if thensCalled != 3 || elsesCalled != 3 {
-		t.Fatalf("expected 0 thens and 3 elses called, got %d and %d", thensCalled, elsesCalled)
+	if elsesCalled != 3 {
+		t.Fatalf("expected 3 elses called, got and %d", elsesCalled)
 	}
 }
