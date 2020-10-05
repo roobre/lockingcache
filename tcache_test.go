@@ -1,4 +1,4 @@
-package test
+package tcache
 
 import (
 	"errors"
@@ -6,66 +6,14 @@ import (
 	"io"
 	"log"
 	"math/rand"
-	"roob.re/tcache"
 	"testing"
 	"time"
 )
 
-func logTimestamp(t *testing.T, msg string, args ...interface{}) {
-	now := time.Now()
-	t.Logf("[%02d:%02d:%02d] %s", now.Hour(), now.Minute(), now.Second(), fmt.Sprintf(msg, args...))
-}
-
-type tableTester struct {
-	rchan chan result
-	cache *tcache.Cache
-	t     *testing.T
-}
-
-type result struct {
-	key        string
-	hit        bool
-	err        error
-	thenCalled bool
-	elseCalled bool
-}
-
-var rerr = errors.New("rerr")
-var werr = errors.New("werr")
-
-func (tt *tableTester) request(key string, latency time.Duration, readError, writeError error) {
-	rt := result{
-		key: key,
-	}
-
-	reqId := fmt.Sprintf("%02d", rand.Int()%100)
-
-	logTimestamp(tt.t, "> %s Requesting %s...", reqId, key)
-	rt.err = tt.cache.Access(key, 0, tcache.Handler{
-		Then: func(r io.Reader) error {
-			rt.thenCalled = true
-			rt.hit = true
-			logTimestamp(tt.t, "  %s %s found!", reqId, key)
-			return readError
-		},
-		Else: func(w io.Writer) error {
-			rt.elseCalled = true
-			logTimestamp(tt.t, "  %s %s not found, waiting...", reqId, key)
-			time.Sleep(latency)
-			logTimestamp(tt.t, "  %s %s written", reqId, key)
-			return writeError
-		},
-	})
-
-	logTimestamp(tt.t, "< %s %s completed (%v, %v)", reqId, key, rt.hit, rt.err)
-
-	tt.rchan <- rt
-}
-
-func testParallelism(t *testing.T, c *tcache.Cache) {
-	tester := tableTester{
+func TestParallelism(t *testing.T) {
+	tester := tester{
 		rchan: make(chan result),
-		cache: c,
+		cache: New(&nilStorage{}),
 		t:     t,
 	}
 
@@ -117,10 +65,10 @@ func testParallelism(t *testing.T, c *tcache.Cache) {
 	}
 }
 
-func testSequentialInvalidation(t *testing.T, c *tcache.Cache) {
-	tester := tableTester{
+func TestSequentialInvalidation(t *testing.T) {
+	tester := tester{
 		rchan: make(chan result),
-		cache: c,
+		cache: New(&nilStorage{}),
 		t:     t,
 	}
 
@@ -155,10 +103,10 @@ func testSequentialInvalidation(t *testing.T, c *tcache.Cache) {
 	}
 }
 
-func testParallelWriteErrors(t *testing.T, c *tcache.Cache) {
-	tester := tableTester{
+func TestParallelWriteErrors(t *testing.T) {
+	tester := tester{
 		rchan: make(chan result),
-		cache: c,
+		cache: New(&nilStorage{}),
 		t:     t,
 	}
 
@@ -186,10 +134,10 @@ func testParallelWriteErrors(t *testing.T, c *tcache.Cache) {
 	}
 }
 
-func testParallelReadErrors(t *testing.T, c *tcache.Cache) {
-	tester := tableTester{
+func TestParallelReadErrors(t *testing.T) {
+	tester := tester{
 		rchan: make(chan result),
-		cache: c,
+		cache: New(&nilStorage{}),
 		t:     t,
 	}
 
@@ -213,4 +161,73 @@ func testParallelReadErrors(t *testing.T, c *tcache.Cache) {
 	if elsesCalled != 3 {
 		t.Fatalf("expected 3 elses called, got and %d", elsesCalled)
 	}
+}
+
+func logTimestamp(t *testing.T, msg string, args ...interface{}) {
+	now := time.Now()
+	t.Logf("[%02d:%02d:%02d] %s", now.Hour(), now.Minute(), now.Second(), fmt.Sprintf(msg, args...))
+}
+
+type tester struct {
+	rchan chan result
+	cache *Cache
+	t     *testing.T
+}
+
+type result struct {
+	key        string
+	hit        bool
+	err        error
+	thenCalled bool
+	elseCalled bool
+}
+
+var rerr = errors.New("rerr")
+var werr = errors.New("werr")
+
+func (t *tester) request(key string, latency time.Duration, readError, writeError error) {
+	rt := result{
+		key: key,
+	}
+
+	reqId := fmt.Sprintf("%02d", rand.Int()%100)
+
+	logTimestamp(t.t, "> %s Requesting %s...", reqId, key)
+	rt.err = t.cache.Access(key, 0, Handler{
+		Then: func(r io.Reader) error {
+			rt.thenCalled = true
+			rt.hit = true
+			logTimestamp(t.t, "  %s %s found!", reqId, key)
+			return readError
+		},
+		Else: func(w io.Writer) error {
+			rt.elseCalled = true
+			logTimestamp(t.t, "  %s %s not found, waiting...", reqId, key)
+			time.Sleep(latency)
+			logTimestamp(t.t, "  %s %s written", reqId, key)
+			return writeError
+		},
+	})
+
+	logTimestamp(t.t, "< %s %s completed (%v, %v)", reqId, key, rt.hit, rt.err)
+
+	t.rchan <- rt
+}
+
+type nilStorage struct{}
+
+func (*nilStorage) Get(key string) Accessor {
+	return &nilAcessor{}
+}
+
+func (ns *nilStorage) Delete(key string) {}
+
+type nilAcessor struct{}
+
+func (*nilAcessor) Reader() (io.Reader, error) {
+	return nil, nil
+}
+
+func (*nilAcessor) Writer() (io.Writer, error) {
+	return nil, nil
 }
