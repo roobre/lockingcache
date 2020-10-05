@@ -14,7 +14,7 @@ type entry struct {
 	modified time.Time
 }
 
-func (e *entry) Read(maxAge time.Duration, handler func(io.Reader) error) error {
+func (e *entry) read(maxAge time.Duration, handler func(io.Reader) error) error {
 	// Check for validity and age
 	if e.valid && (maxAge == 0 || time.Since(e.modified) < maxAge) {
 		// If valid, unlock index and process it
@@ -34,7 +34,7 @@ func (e *entry) Read(maxAge time.Duration, handler func(io.Reader) error) error 
 	return EntryInvalidError
 }
 
-func (e *entry) Write(handler func(writer io.Writer) error) error {
+func (e *entry) write(handler func(writer io.Writer) error) error {
 	w, err := e.accessor.Writer()
 	if err != nil {
 		return errors.New("accessor backend returned an error: " + err.Error())

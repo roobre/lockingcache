@@ -39,7 +39,7 @@ func (c *Cache) Access(key string, maxAge time.Duration, handler Handler) error 
 		c.mtx.Unlock()
 
 		ent.RLock()
-		handlerErr = ent.Read(maxAge, handler.Then)
+		handlerErr = ent.read(maxAge, handler.Then)
 		ent.RUnlock()
 
 		if handlerErr == nil {
@@ -71,7 +71,7 @@ func (c *Cache) Access(key string, maxAge time.Duration, handler Handler) error 
 	ent.accessor = c.storage.Get(key)
 
 	// Invoke handler
-	return ent.Write(handler.Else)
+	return ent.write(handler.Else)
 }
 
 // Delete removes an entry from the cache given its key
@@ -99,15 +99,15 @@ var EntryInvalidError = errors.New("accessor invalidated")
 
 // Storage is an object capable of keeping track of entries (through accessors)
 type Storage interface {
+	// Get must always return a valid non-nil Accessor, creating it if necessary
 	Get(key string) Accessor
+	// Delete must remove an accessor from the storage
 	Delete(key string)
 }
 
 // Accessor is an object capable of providing read/write access to a cache entry
 // For in-memory Storage implementations, an entry can be its own accessor, created by Storage.Get if it does not exist.
-// However, for Storage backends that rely on filesystems, or network services, accessors can be created on the fly to
-// provide access to the entry
-// If Reader or Writer return an error, it will invalidate the entry
+// If Reader or Writer return an error, the entry will be invalidated and the error will be echoed by Cache.Access
 type Accessor interface {
 	Reader() (io.Reader, error)
 	Writer() (io.Writer, error)

@@ -12,7 +12,7 @@ import (
 
 func main() {
 	// Create new cache
-	hashCache := tcache.New(tcache.NewMapStorage())
+	hashCache := tcache.New(tcache.NewMemStorage())
 
 	// Simple HTTP handler, which receives a question and answers with yes/no
 	// Since figuring out the answer takes a long time, but many people want to request "Am I loved?",
