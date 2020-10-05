@@ -7,14 +7,12 @@ import (
 	"math/rand"
 	"net/http"
 	"roob.re/tcache"
-	"roob.re/tcache/mapcache"
 	"time"
 )
 
 func main() {
 	// Create new cache
-	var hashCache tcache.Cache
-	hashCache = mapcache.New()
+	hashCache := tcache.New(tcache.NewMapStorage())
 
 	// Simple HTTP handler, which receives a question and answers with yes/no
 	// Since figuring out the answer takes a long time, but many people want to request "Am I loved?",
@@ -35,7 +33,7 @@ func main() {
 		}
 
 		// Find "passowrd" in collection "passwords"
-		err := hashCache.From("questions").Access(question, 8*time.Hour, tcache.Handler{
+		err := hashCache.Access(question, 8*time.Hour, tcache.Handler{
 			Then: func(cacheReader io.Reader) error {
 				// Found in cache stored in json, dump it
 				_, err := io.Copy(rw, cacheReader)

@@ -19,7 +19,7 @@ func f() {
     var preciousData Data
 
     // Query from collection 
-    err := cache.From("myCollection").Access("mypreciousdata", 8*time.Hour, tcache.Handler{
+    err := cache.Access("mypreciousdata", 8*time.Hour, tcache.Handler{
         // Then function is executed if data is found in the cache
         // This function can be executed concurrently (as in sync.RWMutex.RLock())
         Then: func(cacheReader io.Reader) error {
@@ -63,4 +63,18 @@ If an invalid entry is found when querying the cache, the behavior is the same a
 
 ## Stability
 
-I have developed this project as an spin-off of a bigger HTTP server which needed a cache like this. I do not consider this code to be stable or production-ready in any sense.
+### Code
+
+I originally developed this cache as a part of a bigger REST API project, for which being able to concurrently serve from cache expensive requests was a requirement. I later saw that it could be interesting to use this caching mechanism for other project, so tcache was born and extracted out.
+
+While it is actively used by said project, it is for a hobby-like environment in which catastrophic failure or lack of performance are tolerated. I do not consider tcache to be stable or production-ready in any sense.
+
+### API
+
+Being early pre-alpha, I change the tcache API whenever I feel like it. I'm quite happy with its current shape, but there is absolutely no guarantee of this being its final form. 
+
+## Implementing backends *(WIP)*
+
+The `tcache` package manages the complex and specific concurrency tricks to provide transactional access to cache entries. The task of storing data is delegated to implementations of `tcache.Storage`, which tend to be simple.
+
+> This section is a WIP and needs further expansion

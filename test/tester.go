@@ -1,4 +1,4 @@
-package mapcache
+package test
 
 import (
 	"errors"
@@ -18,7 +18,7 @@ func logTimestamp(t *testing.T, msg string, args ...interface{}) {
 
 type tableTester struct {
 	rchan chan result
-	table tcache.Table
+	cache *tcache.Cache
 	t     *testing.T
 }
 
@@ -41,7 +41,7 @@ func (tt *tableTester) request(key string, latency time.Duration, readError, wri
 	reqId := fmt.Sprintf("%02d", rand.Int()%100)
 
 	logTimestamp(tt.t, "> %s Requesting %s...", reqId, key)
-	rt.err = tt.table.Access(key, 0, tcache.Handler{
+	rt.err = tt.cache.Access(key, 0, tcache.Handler{
 		Then: func(r io.Reader) error {
 			rt.thenCalled = true
 			rt.hit = true
@@ -62,13 +62,11 @@ func (tt *tableTester) request(key string, latency time.Duration, readError, wri
 	tt.rchan <- rt
 }
 
-func TestParallelism(t *testing.T) {
+func testParallelism(t *testing.T, c *tcache.Cache) {
 	tester := tableTester{
 		rchan: make(chan result),
-		table: &mapTable{
-			rows: map[string]*mapEntry{},
-		},
-		t: t,
+		cache: c,
+		t:     t,
 	}
 
 	go tester.request("first", 0, nil, nil)
@@ -119,13 +117,11 @@ func TestParallelism(t *testing.T) {
 	}
 }
 
-func TestSequentialInvalidation(t *testing.T) {
+func testSequentialInvalidation(t *testing.T, c *tcache.Cache) {
 	tester := tableTester{
 		rchan: make(chan result),
-		table: &mapTable{
-			rows: map[string]*mapEntry{},
-		},
-		t: t,
+		cache: c,
+		t:     t,
 	}
 
 	go tester.request("first", 0, nil, nil)
@@ -159,13 +155,11 @@ func TestSequentialInvalidation(t *testing.T) {
 	}
 }
 
-func TestParallelWriteErrors(t *testing.T) {
+func testParallelWriteErrors(t *testing.T, c *tcache.Cache) {
 	tester := tableTester{
 		rchan: make(chan result),
-		table: &mapTable{
-			rows: map[string]*mapEntry{},
-		},
-		t: t,
+		cache: c,
+		t:     t,
 	}
 
 	go tester.request("first", 4*time.Second, nil, werr)
@@ -192,13 +186,11 @@ func TestParallelWriteErrors(t *testing.T) {
 	}
 }
 
-func TestParallelReadErrors(t *testing.T) {
+func testParallelReadErrors(t *testing.T, c *tcache.Cache) {
 	tester := tableTester{
 		rchan: make(chan result),
-		table: &mapTable{
-			rows: map[string]*mapEntry{},
-		},
-		t: t,
+		cache: c,
+		t:     t,
 	}
 
 	go tester.request("first", 0, nil, nil)
