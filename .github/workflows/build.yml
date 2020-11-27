@@ -4,31 +4,25 @@ on:
     branches:
       - master
   pull_request:
+
 jobs:
   build:
     name: Build and test
     runs-on: ubuntu-latest
-    env:
-      COVERAGE_FILE: c.out
-      CC_TEST_REPORTER_ID: 39890c211762e1d6d9bb1e5bf04d20f707559a340b8ffaf7695cf27d547e2b34
     steps:
       - uses: actions/checkout@v2
-      - name: Install Go
-        uses: actions/setup-go@v2
+      - uses: actions/setup-go@v2
         with:
           go-version: '^1.15.5'
+
       - name: Build code
         run: go build ./...
+      - name: Run tests
+        run: go test ./...
 
-      - name: Download codeclimate reporter
-        run: |
-          curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
-          chmod +x ./cc-test-reporter
-          ./cc-test-reporter before-build
-
-      - name: Run tests with coverage
-        run: go test -coverprofile=$COVERAGE_FILE ./...
-
-      - name: Report coverage
-        if: ${{ always() }}
-        run: ./cc-test-reporter after-build -t gocov --prefix $(pwd)
+      - name: Test & publish code coverage
+        uses: paambaati/codeclimate-action@v2.7.4
+        env:
+         CC_TEST_REPORTER_ID: 39890c211762e1d6d9bb1e5bf04d20f707559a340b8ffaf7695cf27d547e2b34
+        with:
+          coverageCommand: bash -c "go test -coverprofile=c.out ./... && sed -i 's|roob.re/tcache/||' c.out"
